@@ -1,113 +1,80 @@
 import random
+import sys
 
-# Clase Equipo
-class Equipo:
-    def __init__(self, nombre):
-        self.nombre = nombre
-        self.partidosGanados = 0
-        self.partidosPerdidos = 0
-        self.setGanados = 0
+def generar_matriz(n):
+    """Crea matriz NxN con números aleatorios entre 99 y 999"""
+    return [[random.randint(99, 999) for _ in range(n)] for _ in range(n)]
 
 
-# Crear equipos
-equipo1 = Equipo("Equipo A")
-equipo2 = Equipo("Equipo B")
+def mostrar_matriz(matriz):
+    """Muestra la matriz en formato cuadrado"""
+    for fila in matriz:
+        print("  ".join(f"{num:4d}" for num in fila))
+    print()
 
 
-# Función para registrar set
-def RegistraSet(ganador):
-    global equipo1, equipo2
+def contar_multiplos_dyv(matriz, fi=0, ff=None, ci=0, cf=None):
+    """
+    Algoritmo DIVIDE Y VENCERÁS
+    Divide la matriz en 4 submatrices recursivamente
+    """
+    if ff is None:
+        ff = len(matriz)
+    if cf is None:
+        cf = len(matriz[0])
 
-    if ganador == 1:
-        equipo1.setGanados += 1
-        print(equipo1.nombre, "ganó un set")
+    filas = ff - fi
+    columnas = cf - ci
 
-        if equipo1.setGanados == 3:
-            equipo1.partidosGanados += 1
-            equipo2.partidosPerdidos += 1
-            print(">>>", equipo1.nombre, "ganó el partido")
+    # ==================== CASO BASE ====================
+    if filas == 1 and columnas == 1:
+        num = matriz[fi][ci]
+        return 1 if num % 5 == 0 or num % 7 == 0 else 0
 
-            equipo1.setGanados = 0
-            equipo2.setGanados = 0
+    # Si es muy pequeño, procesamos directamente (sin bucles grandes)
+    if filas * columnas <= 4:   # Umbral pequeño
+        count = 0
+        for i in range(fi, ff):
+            for j in range(ci, cf):
+                if matriz[i][j] % 5 == 0 or matriz[i][j] % 7 == 0:
+                    count += 1
+        return count
 
-    else:
-        equipo2.setGanados += 1
-        print(equipo2.nombre, "ganó un set")
+    # ==================== DIVIDE ====================
+    fila_mid = (fi + ff) // 2
+    col_mid = (ci + cf) // 2
 
-        if equipo2.setGanados == 3:
-            equipo2.partidosGanados += 1
-            equipo1.partidosPerdidos += 1
-            print(">>>", equipo2.nombre, "ganó el partido")
+    # Cuatro submatrices
+    c1 = contar_multiplos_dyv(matriz, fi, fila_mid, ci, col_mid)
+    c2 = contar_multiplos_dyv(matriz, fi, fila_mid, col_mid, cf)
+    c3 = contar_multiplos_dyv(matriz, fila_mid, ff, ci, col_mid)
+    c4 = contar_multiplos_dyv(matriz, fila_mid, ff, col_mid, cf)
 
-            equipo1.setGanados = 0
-            equipo2.setGanados = 0
-
-
-# Función puntos
-def Puntos():
-    return random.randint(10, 28)
-
-
-# Función puntos extras
-def PuntosExtras():
-    return random.randint(0, 6)
-
-
-# Función para jugar un partido
-def JugarPartido():
-    global equipo1, equipo2
-
-    print("\n--- Nuevo Partido ---")
-
-    while equipo1.setGanados < 3 and equipo2.setGanados < 3:
-
-        p1 = Puntos()
-        p2 = Puntos()
-
-        print("Puntos iniciales:", equipo1.nombre, p1, "-", equipo2.nombre, p2)
-
-        # Caso normal (alguien llega a 25 o más)
-        if p1 >= 25 or p2 >= 25:
-            if p1 > p2:
-                RegistraSet(1)
-            else:
-                RegistraSet(2)
-
-        else:
-            # Puntos extra hasta que alguien supere 25
-            while True:
-                extra1 = PuntosExtras()
-                extra2 = PuntosExtras()
-
-                p1 += extra1
-                p2 += extra2
-
-                print("Extras:", equipo1.nombre, p1, "-", equipo2.nombre, p2)
-
-                if (p1 >= 25 or p2 >= 25) and p1 != p2:
-                    if p1 > p2:
-                        RegistraSet(1)
-                    else:
-                        RegistraSet(2)
-                    break
+    # ==================== VENCE (combina) ====================
+    return c1 + c2 + c3 + c4
 
 
-# Resultado final
-def ResultadoTorneo():
-    print("\n=== RESULTADO FINAL ===")
-    print(equipo1.nombre)
-    print("Ganados:", equipo1.partidosGanados)
-    print("Perdidos:", equipo1.partidosPerdidos)
+# ====================== PROGRAMA PRINCIPAL ======================
+if __name__ == "__main__":
+    print("=== Matriz NxN con Divide y Vencerás ===\n")
 
-    print("\n", equipo2.nombre)
-    print("Ganados:", equipo2.partidosGanados)
-    print("Perdidos:", equipo2.partidosPerdidos)
+    try:
+        n = int(input("Ingrese el tamaño de la matriz (N x N): "))
+        if n < 1:
+            print("El tamaño debe ser mayor que 0.")
+            sys.exit(1)
+    except ValueError:
+        print("Entrada inválida. Debe ser un número entero.")
+        sys.exit(1)
 
+    print(f"\nGenerando matriz {n} x {n}...\n")
+    
+    matriz = generar_matriz(n)
 
-# Programa principal
-cantidad = int(input("¿Cuántos partidos se jugarán? "))
+    print("Matriz generada:")
+    mostrar_matriz(matriz)
 
-for i in range(cantidad):
-    JugarPartido()
+    # Conteo usando Divide y Vencerás
+    cantidad = contar_multiplos_dyv(matriz)
 
-ResultadoTorneo()
+    print(f"Cantidad de números múltiplos de 5 o 7: **{cantidad}**")
