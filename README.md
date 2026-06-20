@@ -1,81 +1,115 @@
-import random
+# Laberinto 9x9
 
-import sys
+laberinto = [
+    ['F', 1, 1, 1, 0, 1, 1, 1, 1],
+    [-2, 0, 0, -1, 0, 1, 0, 1, 0],
+    [1, 1, 0, 1, 1, 1, 0, 1, 0],
+    [0, 1, 0, -1, 0, 0, 0, -1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [-1, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, -1, 1, 1, 1, 0],
+    [1, 0, 0, 1, 0, 1, 0, 1, 0],
+    ['I', 1, -1, 1, 1, 1, 0, 1, 1]
+]
 
-def generar_matriz(n):
-    """Crea matriz NxN con números aleatorios entre 99 y 999"""
-    return [[random.randint(99, 999) for _ in range(n)] for _ in range(n)]
+FILAS = 9
+COLUMNAS = 9
+VIDAS_INICIALES = 3
 
+# Orden de movimiento: abajo, derecha, arriba, izquierda
+movimientos = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
-def mostrar_matriz(matriz):
-    """Muestra la matriz en formato cuadrado"""
-    for fila in matriz:
-        print("  ".join(f"{num:4d}" for num in fila))
-    print()
+# Matriz solución
+solucion = [[0 for _ in range(COLUMNAS)] for _ in range(FILAS)]
 
-
-def contar_multiplos_dyv(matriz, fi=0, ff=None, ci=0, cf=None):
-    """
-    Algoritmo DIVIDE Y VENCERÁS
-    Divide la matriz en 4 submatrices recursivamente
-    """
-    if ff is None:
-        ff = len(matriz)
-    if cf is None:
-        cf = len(matriz[0])
-
-    filas = ff - fi
-    columnas = cf - ci
-
-    # ==================== CASO BASE ====================
-    if filas == 1 and columnas == 1:
-        num = matriz[fi][ci]
-        return 1 if num % 5 == 0 or num % 7 == 0 else 0
-
-    # Si es muy pequeño, procesamos directamente (sin bucles grandes)
-    if filas * columnas <= 4:   # Umbral pequeño
-        count = 0
-        for i in range(fi, ff):
-            for j in range(ci, cf):
-                if matriz[i][j] % 5 == 0 or matriz[i][j] % 7 == 0:
-                    count += 1
-        return count
-
-    # ==================== DIVIDE ====================
-    fila_mid = (fi + ff) // 2
-    col_mid = (ci + cf) // 2
-
-    # Cuatro submatrices
-    c1 = contar_multiplos_dyv(matriz, fi, fila_mid, ci, col_mid)
-    c2 = contar_multiplos_dyv(matriz, fi, fila_mid, col_mid, cf)
-    c3 = contar_multiplos_dyv(matriz, fila_mid, ff, ci, col_mid)
-    c4 = contar_multiplos_dyv(matriz, fila_mid, ff, col_mid, cf)
-
-    # ==================== VENCE (combina) ====================
-    return c1 + c2 + c3 + c4
+inicio = (8, 0)
+fin = (0, 0)
 
 
-# ====================== PROGRAMA PRINCIPAL ======================
-if __name__ == "__main__":
-    print("=== Matriz NxN con Divide y Vencerás ===\n")
+def es_valido(fila, columna, visitados):
+    return (
+        0 <= fila < FILAS and
+        0 <= columna < COLUMNAS and
+        laberinto[fila][columna] != 0 and
+        not visitados[fila][columna]
+    )
 
-    try:
-        n = int(input("Ingrese el tamaño de la matriz (N x N): "))
-        if n < 1:
-            print("El tamaño debe ser mayor que 0.")
-            sys.exit(1)
-    except ValueError:
-        print("Entrada inválida. Debe ser un número entero.")
-        sys.exit(1)
 
-    print(f"\nGenerando matriz {n} x {n}...\n")
-    
-    matriz = generar_matriz(n)
+def costo_celda(valor):
+    if valor == -1:
+        return 1
+    elif valor == -2:
+        return 2
+    return 0
 
-    print("Matriz generada:")
-    mostrar_matriz(matriz)
 
-    # Conteo usando Divide y Vencerás
-    cantidad = contar_multiplos_dyv(matriz)
+def mostrar_paso(fila, columna, vidas):
+    print(f"Posición: ({fila}, {columna}) - Vidas restantes: {vidas}")
 
-    print(f"Cantidad de números múltiplos de 5 o 7: **{cantidad}**")
+
+def backtracking(fila, columna, vidas, visitados):
+
+    if (fila, columna) == fin:
+        solucion[fila][columna] = 1
+        mostrar_paso(fila, columna, vidas)
+        return True
+
+    visitados[fila][columna] = True
+    solucion[fila][columna] = 1
+
+    mostrar_paso(fila, columna, vidas)
+
+    for df, dc in movimientos:
+        nueva_fila = fila + df
+        nueva_columna = columna + dc
+
+        if es_valido(nueva_fila, nueva_columna, visitados):
+
+            valor = laberinto[nueva_fila][nueva_columna]
+
+            if valor in ['I', 'F']:
+                perdida = 0
+            else:
+                perdida = costo_celda(valor)
+
+            nuevas_vidas = vidas - perdida
+
+            if nuevas_vidas > 0:
+                if backtracking(
+                    nueva_fila,
+                    nueva_columna,
+                    nuevas_vidas,
+                    visitados
+                ):
+                    return True
+
+    solucion[fila][columna] = 0
+    visitados[fila][columna] = False
+
+    return False
+
+
+print("LABERINTO ORIGINAL:\n")
+
+for fila in laberinto:
+    print(fila)
+
+visitados = [[False for _ in range(COLUMNAS)] for _ in range(FILAS)]
+
+print("\nRECORRIDO DEL RATÓN:\n")
+
+encontrado = backtracking(
+    inicio[0],
+    inicio[1],
+    VIDAS_INICIALES,
+    visitados
+)
+
+if encontrado:
+    print("\n¡El ratón logró salir del laberinto!\n")
+    print("MATRIZ SOLUCIÓN:")
+
+    for fila in solucion:
+        print(fila)
+else:
+    print("\nNo existe un camino viable.")
